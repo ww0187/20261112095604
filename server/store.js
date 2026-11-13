@@ -36,12 +36,40 @@ export function createMemoryStore({ seed = true, now = () => Date.now() } = {}) 
         id: globalThis.crypto.randomUUID(),
         nickname: name,
         content: text,
-        createdAt: now()
+        createdAt: now(),
+        likes: 0,
+        liked: false,
+        favorited: false
       };
 
       messages = [...messages, message];
       profile = name;
       return { ...message };
+    },
+
+    toggleLike(id) {
+      const index = messages.findIndex((item) => item.id === id);
+      if (index === -1) return null;
+
+      const current = messages[index];
+      const base = Number.isFinite(current.likes) && current.likes > 0 ? current.likes : 0;
+      const liked = !current.liked;
+      const likes = liked ? base + 1 : Math.max(0, base - 1);
+      const next = { ...current, likes, liked };
+
+      messages = messages.map((item, i) => (i === index ? next : item));
+      return { id: next.id, likes: next.likes, liked: next.liked };
+    },
+
+    toggleFavorite(id) {
+      const index = messages.findIndex((item) => item.id === id);
+      if (index === -1) return null;
+
+      const current = messages[index];
+      const next = { ...current, favorited: !current.favorited };
+
+      messages = messages.map((item, i) => (i === index ? next : item));
+      return { id: next.id, favorited: next.favorited };
     },
 
     remove(id) {

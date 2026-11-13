@@ -185,3 +185,75 @@ describe("未匹配路由", () => {
     expect((await res.json()).error.code).toBe("NOT_FOUND");
   });
 });
+
+describe("POST /api/messages/:id/like", () => {
+  it("点赞返回 200 与完整的 { id, likes, liked }", async () => {
+    const created = store.add({ content: "点个赞" });
+    const res = await send(`/api/messages/${created.id}/like`, "POST", {});
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ id: created.id, likes: 1, liked: true });
+  });
+
+  it("连续两次点赞回到原状", async () => {
+    const created = store.add({ content: "点两次" });
+    await send(`/api/messages/${created.id}/like`, "POST", {});
+    const res = await send(`/api/messages/${created.id}/like`, "POST", {});
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ id: created.id, likes: 0, liked: false });
+  });
+
+  it("不存在的 id 返回 404 NOT_FOUND（中文提示）", async () => {
+    const res = await send("/api/messages/nope/like", "POST", {});
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.code).toBe("NOT_FOUND");
+    expect(body.error.message).toMatch(/[\u4e00-\u9fa5]/);
+  });
+});
+
+describe("POST /api/messages/:id/favorite", () => {
+  it("收藏返回 200 与 { id, favorited }", async () => {
+    const created = store.add({ content: "收起来" });
+    const res = await send(`/api/messages/${created.id}/favorite`, "POST", {});
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ id: created.id, favorited: true });
+  });
+
+  it("再次请求取消收藏", async () => {
+    const created = store.add({ content: "收两次" });
+    await send(`/api/messages/${created.id}/favorite`, "POST", {});
+    const res = await send(`/api/messages/${created.id}/favorite`, "POST", {});
+    expect(await res.json()).toEqual({ id: created.id, favorited: false });
+  });
+
+  it("不存在的 id 返回 404 NOT_FOUND", async () => {
+    const res = await send("/api/messages/nope/favorite", "POST", {});
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("点赞 / 收藏后的列表回读", () => {
+  it("点赞后 GET /api/messages 能读到更新后的 likes 与 liked", async () => {
+    const created = store.add({ content: "回读点赞" });
+    await send(`/api/messages/${created.id}/like`, "POST", {});
+    const { messages } = await (await app.request("/api/messages")).json();
+    expect(messages[0]).toMatchObject({ id: created.id, likes: 1, liked: true });
+  });
+
+  it("收藏后 GET /api/messages 能读到 favorited", async () => {
+    const created = store.add({ content: "回读收藏" });
+    await send(`/api/messages/${created.id}/favorite`, "POST", {});
+    const { messages } = await (await app.request("/api/messages")).json();
+    expect(messages[0]).toMatchObject({ id: created.id, favorited: true });
+  });
+
+  it("seed 消息自带 liked / favorited 布尔字段", async () => {
+    app = createApp({ store: createMemoryStore({ now: () => FIXED_NOW }) });
+    const { messages } = await (await app.request("/api/messages")).json();
+    expect(messages).toHaveLength(SEED_COUNT);
+    expect(messages.every((item) => typeof item.likes === "number")).toBe(true);
+    expect(messages.every((item) => typeof item.liked === "boolean")).toBe(true);
+    expect(messages.every((item) => typeof item.favorited === "boolean")).toBe(true);
+  });
+});
