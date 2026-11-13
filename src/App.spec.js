@@ -112,17 +112,22 @@ describe("App 集成", () => {
   it("点赞后计数 +1 且按钮进入激活态", async () => {
     const wrapper = await mountApp();
 
-    expect(wrapper.findAll('[data-test="like-count"]')[0].text()).toBe("0");
+    /* 示例数据的 likes 不一定为 0，断言相对增量而非绝对值 */
+    const before = Number(wrapper.findAll('[data-test="like-count"]')[0].text());
+    expect(wrapper.findAll('[data-test="like"]')[0].attributes("aria-pressed")).toBe("false");
 
     await wrapper.findAll('[data-test="like"]')[0].trigger("click");
     await flushPromises();
 
-    expect(wrapper.findAll('[data-test="like-count"]')[0].text()).toBe("1");
+    expect(wrapper.findAll('[data-test="like-count"]')[0].text()).toBe(String(before + 1));
     expect(wrapper.findAll('[data-test="like"]')[0].attributes("aria-pressed")).toBe("true");
   });
 
   it("收藏后收藏数量 +1，切到收藏筛选只剩这一条", async () => {
     const wrapper = await mountApp();
+
+    const before = Number(wrapper.find('[data-test="favorite-count"]').text());
+    expect(before).toBe(0);
 
     await wrapper.findAll('[data-test="favorite"]')[0].trigger("click");
     await flushPromises();
