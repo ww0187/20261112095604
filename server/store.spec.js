@@ -72,7 +72,10 @@ describe("createMemoryStore · add", () => {
       id: expect.any(String),
       nickname: "小满",
       content: "雨天煮茶",
-      createdAt: FIXED_NOW
+      createdAt: FIXED_NOW,
+      likes: 0,
+      liked: false,
+      favorited: false
     });
     expect(message.id.length).toBeGreaterThan(8);
   });
@@ -158,5 +161,113 @@ describe("createMemoryStore · nickname / profile", () => {
     store.setNickname("白露");
     expect(store.setNickname("   ")).toBe("");
     expect(store.getNickname()).toBe("");
+  });
+});
+
+describe("createMemoryStore · 点赞与收藏默认值", () => {
+  it("新增消息默认 likes 为 0 且未点赞未收藏", () => {
+    const store = createMemoryStore({ seed: false });
+    const message = store.add({ content: "第一杯茶" });
+    expect(message.likes).toBe(0);
+    expect(message.liked).toBe(false);
+    expect(message.favorited).toBe(false);
+    expect(store.list()[0]).toMatchObject({ likes: 0, liked: false, favorited: false });
+  });
+
+  it("示例消息的 likes 由确定性规则生成，范围 0~23 且至少一条为 0", () => {
+    const first = createMemoryStore({ now: () => FIXED_NOW }).list().map((item) => item.likes);
+    const second = createMemoryStore({ now: () => FIXED_NOW }).list().map((item) => item.likes);
+    expect(first).toEqual(second);
+    expect(first.every((value) => Number.isInteger(value) && value >= 0 && value <= 23)).toBe(true);
+    expect(first).toContain(0);
+  });
+
+  it("示例消息默认未点赞未收藏", () => {
+    const list = createMemoryStore({ now: () => FIXED_NOW }).list();
+    expect(list.every((item) => item.liked === false)).toBe(true);
+    expect(list.every((item) => item.favorited === false)).toBe(true);
+  });
+});
+
+describe("createMemoryStore · toggleLike", () => {
+  it("首次点赞 likes +1 且 liked 变为 true", () => {
+    const store = createMemoryStore({ seed: false });
+    const created = store.add({ content: "值得点一下" });
+    expect(store.toggleLike(created.id)).toEqual({ id: created.id, likes: 1, liked: true });
+    expect(store.list()[0]).toMatchObject({ likes: 1, liked: true });
+  });
+
+  it("再次点赞取消，回到原始计数", () => {
+    const store = createMemoryStore({ seed: false });
+    const created = store.add({ content: "来回切换" });
+    store.toggleLike(created.id);
+    expect(store.toggleLike(created.id)).toEqual({ id: created.id, likes: 0, liked: false });
+    expect(store.list()[0]).toMatchObject({ likes: 0, liked: false });
+  });
+
+  it("反复点赞取消后 likes 始终为非负整数", () => {
+    const store = createMemoryStore({ seed: false });
+    const created = store.add({ content: "很多次" });
+    for (let i = 0; i < 7; i += 1) {
+      const result = store.toggleLike(created.id);
+      expect(result.likes).toBeGreaterThanOrEqual(0);
+      expect(Number.isInteger(result.likes)).toBe(true);
+    }
+    expect(store.list()[0].liked).toBe(true);
+  });
+
+  it("id 不存在返回 null 且不影响已有消息", () => {
+    const store = createMemoryStore({ seed: false });
+    store.add({ content: "唯一一条" });
+    expect(store.toggleLike("missing-id")).toBeNull();
+    expect(store.list()).toHaveLength(1);
+    expect(store.list()[0].likes).toBe(0);
+  });
+
+  it("只影响目标任务消息", () => {
+    const store = createMemoryStore({ seed: false });
+    const first = store.add({ content: "甲" });
+    const second = store.add({ content: "乙" });
+    store.toggleLike(first.id);
+    const byId = Object.fromEntries(store.list().map((item) => [item.id, item]));
+    expect(byId[first.id]).toMatchObject({ likes: 1, liked: true });
+    expect(byId[second.id]).toMatchObject({ likes: 0, liked: false });
+  });
+});
+
+describe("createMemoryStore · toggleFavorite", () => {
+  it("收藏后 favorited 为 true，再次调用取消收藏", () => {
+    const store = createMemoryStore({ seed: false });
+    const created = store.add({ content: "先收藏" });
+    expect(store.toggleFavorite(created.id)).toEqual({ id: created.id, favorited: true });
+    expect(store.list()[0].favorited).toBe(true);
+    expect(store.toggleFavorite(created.id)).toEqual({ id: created.id, favorited: false });
+    expect(store.list()[0].favorited).toBe(false);
+  });
+
+  it("id 不存在返回 null", () => {
+    const store = createMemoryStore({ seed: false });
+    expect(store.toggleFavorite("missing-id")).toBeNull();
+  });
+
+  it("收藏与点赞互不干扰", () => {
+    const store = createMemoryStore({ seed: false });
+    const created = store.add({ content: "两件事分开" });
+    store.toggleFavorite(created.id);
+    const liked = store.toggleLike(created.id);
+    expect(liked).toMatchObject({ likes: 1, liked: true });
+    expect(store.list()[0].favorited).toBe(true);
+  });
+});
+
+describe("createMemoryStore · list 副本隔离（新字段）", () => {
+  it("list() 返回的副本带三个新字段，修改副本不影响内部状态", () => {
+    const store = createMemoryStore({ seed: false });
+    store.add({ content: "副本隔离" });
+    const snapshot = store.list();
+    snapshot[0].likes = 99;
+    snapshot[0].liked = true;
+    snapshot[0].favorited = true;
+    expect(store.list()[0]).toMatchObject({ likes: 0, liked: false, favorited: false });
   });
 });

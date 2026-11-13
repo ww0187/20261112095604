@@ -28,6 +28,9 @@ export const SEED_CONTENTS = [
    首条仅 5 秒前，加上最多 29 秒抖动仍能稳定落在「刚刚」区间 */
 const GAPS = [5, 6 * 60, 45 * 60, 3 * 3600, 6 * 3600, 18 * 3600, 22 * 3600, 26 * 3600, 30 * 3600, 36 * 3600];
 
+/* 示例茶话的点赞数：按下标取常量，保证确定性（便于测试），范围 0~23 且含 0 */
+export const SEED_LIKES = [12, 0, 7, 23, 3, 18, 5, 0, 9, 21];
+
 function shuffle(list) {
   const result = [...list];
   for (let i = result.length - 1; i > 0; i -= 1) {
@@ -54,7 +57,10 @@ export function createSeedMessages(now = Date.now(), count = 10) {
       id: seedId(i),
       nickname: nicknames[i % nicknames.length],
       content: contents[i % contents.length],
-      createdAt: now - offset
+      createdAt: now - offset,
+      likes: SEED_LIKES[i % SEED_LIKES.length],
+      liked: false,
+      favorited: false
     });
   }
 

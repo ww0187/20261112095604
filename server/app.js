@@ -55,6 +55,18 @@ export function createApp({ store = createMemoryStore() } = {}) {
     return c.json({ message }, 201);
   });
 
+  app.post(`${API_BASE}/messages/:id/like`, (c) => {
+    const result = store.toggleLike(c.req.param("id"));
+    if (!result) return c.json(fail("NOT_FOUND"), 404);
+    return c.json(result, 200);
+  });
+
+  app.post(`${API_BASE}/messages/:id/favorite`, (c) => {
+    const result = store.toggleFavorite(c.req.param("id"));
+    if (!result) return c.json(fail("NOT_FOUND"), 404);
+    return c.json(result, 200);
+  });
+
   app.delete(`${API_BASE}/messages/:id`, (c) => {
     const id = c.req.param("id");
     if (!store.remove(id)) return c.json(fail("NOT_FOUND"), 404);
