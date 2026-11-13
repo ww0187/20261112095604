@@ -1,0 +1,15 @@
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 依赖与构建产物（本项目无需构建，仅作兜底）
+node_modules/
+dist/
+*.log
