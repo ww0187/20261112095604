@@ -24,8 +24,9 @@ export const SEED_CONTENTS = [
   "深夜煮了壶熟普，屋子里像点了暖灯。"
 ];
 
-/* 每条相对上一条再往前推的秒数，覆盖 刚刚 / 分钟 / 小时 / 天 */
-const GAPS = [30, 6 * 60, 45 * 60, 3 * 3600, 6 * 3600, 18 * 3600, 22 * 3600, 26 * 3600, 30 * 3600, 36 * 3600];
+/* 每条相对上一条再往前推的秒数，覆盖 刚刚 / 分钟 / 小时 / 天
+   首条仅 5 秒前，加上最多 29 秒抖动仍能稳定落在「刚刚」区间 */
+const GAPS = [5, 6 * 60, 45 * 60, 3 * 3600, 6 * 3600, 18 * 3600, 22 * 3600, 26 * 3600, 30 * 3600, 36 * 3600];
 
 function shuffle(list) {
   const result = [...list];
@@ -48,7 +49,7 @@ export function createSeedMessages(now = Date.now(), count = 10) {
   let offset = 0;
 
   for (let i = 0; i < count; i += 1) {
-    offset += (GAPS[i % GAPS.length] + Math.floor(Math.random() * 60)) * 1000;
+    offset += (GAPS[i % GAPS.length] + Math.floor(Math.random() * 30)) * 1000;
     messages.push({
       id: seedId(i),
       nickname: nicknames[i % nicknames.length],

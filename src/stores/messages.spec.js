@@ -26,6 +26,13 @@ describe("messages store", () => {
       expect(readStoredMessages()).toHaveLength(10);
     });
 
+    it("示例数据最新一条始终在“刚刚”范围内（1 分钟内）", () => {
+      const store = newStore();
+      store.hydrate();
+
+      expect(Date.now() - store.messages[0].createdAt).toBeLessThan(60 * 1000);
+    });
+
     it("示例数据的昵称与正文互不重复，并按时间倒序排列", () => {
       const store = newStore();
       store.hydrate();
