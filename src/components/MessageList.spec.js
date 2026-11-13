@@ -29,4 +29,34 @@ describe("MessageList", () => {
 
     expect(wrapper.emitted("delete")[0]).toEqual(["a"]);
   });
+
+  it("透传点赞事件", async () => {
+    const wrapper = mount(MessageList, { props: { messages } });
+
+    await wrapper.findAll('[data-test="like"]')[0].trigger("click");
+
+    expect(wrapper.emitted("like")[0]).toEqual(["a"]);
+    expect(wrapper.emitted("delete")).toBeUndefined();
+  });
+
+  it("透传收藏事件", async () => {
+    const wrapper = mount(MessageList, { props: { messages } });
+
+    await wrapper.findAll('[data-test="favorite"]')[1].trigger("click");
+
+    expect(wrapper.emitted("favorite")[0]).toEqual(["b"]);
+  });
+
+  it("空态文案可由调用方覆盖（收藏筛选），默认文案保持不变", () => {
+    const custom = mount(MessageList, {
+      props: { messages: [], emptyTitle: "书签里还空着", emptyText: "点开茶话下方的书签，留一杯在这里。" }
+    });
+
+    expect(custom.find('[data-test="empty"]').text()).toContain("书签里还空着");
+    expect(custom.find('[data-test="empty"]').text()).toContain("留一杯在这里");
+    expect(custom.find('[data-test="empty"]').text()).not.toContain("茶桌还空着");
+
+    const fallback = mount(MessageList, { props: { messages: [] } });
+    expect(fallback.find('[data-test="empty"]').text()).toContain("茶桌还空着");
+  });
 });

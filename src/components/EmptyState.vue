@@ -1,3 +1,10 @@
+<script setup>
+defineProps({
+  title: { type: String, default: "茶桌还空着" },
+  text: { type: String, default: "泡一壶热茶，说说今天的秋意。" }
+});
+</script>
+
 <template>
   <div class="empty is-visible" data-test="empty">
     <svg class="empty__art" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -11,7 +18,7 @@
         <circle cx="89" cy="39" r="3.4" />
       </g>
     </svg>
-    <p class="empty__title">茶桌还空着</p>
-    <p class="empty__text">泡一壶热茶，说说今天的秋意。</p>
+    <p class="empty__title" data-test="empty-title">{{ title }}</p>
+    <p class="empty__text" data-test="empty-text">{{ text }}</p>
   </div>
 </template>

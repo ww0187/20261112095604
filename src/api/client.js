@@ -76,7 +76,7 @@ async function request(path, { method = "GET", body } = {}) {
   return payload;
 }
 
-/* 以下 6 个函数即前端数据层的全部入口，store 只依赖它们 */
+/* 以下 8 个函数即前端数据层的全部入口，store 只依赖它们 */
 
 export async function listMessages() {
   const payload = await request("/messages");
@@ -116,4 +116,43 @@ export async function getProfile() {
 export async function saveNickname(nickname) {
   const payload = await request("/profile", { method: "PUT", body: { nickname } });
   return typeof payload?.nickname === "string" ? payload.nickname : "";
+}
+
+/* 计数容错：负数、NaN、非数字一律归零，保证界面不会出现负数或 NaN */
+function normalizeCount(value) {
+  const count = Math.floor(Number(value));
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+/**
+ * 点赞 / 取消点赞：POST /messages/:id/like。
+ * 返回 { id, likes, liked }，其中 likes 以服务端为准（本地不做加减），
+ * likes 缺失或非法时兜底为 0；id 缺失说明响应不完整，抛 INVALID_RESPONSE。
+ */
+export async function toggleLike(id) {
+  const payload = await request(`/messages/${encodeURIComponent(id)}/like`, { method: "POST" });
+  if (!payload || typeof payload !== "object" || typeof payload.id !== "string" || !payload.id) {
+    throw new ApiError("服务端返回的数据不完整，请稍后重试。", {
+      status: 0,
+      code: "INVALID_RESPONSE"
+    });
+  }
+  return { id: payload.id, likes: normalizeCount(payload.likes), liked: Boolean(payload.liked) };
+}
+
+/**
+ * 收藏 / 取消收藏：POST /messages/:id/favorite。
+ * 返回 { id, favorited }；响应不完整抛 INVALID_RESPONSE。
+ */
+export async function toggleFavorite(id) {
+  const payload = await request(`/messages/${encodeURIComponent(id)}/favorite`, {
+    method: "POST"
+  });
+  if (!payload || typeof payload !== "object" || typeof payload.id !== "string" || !payload.id) {
+    throw new ApiError("服务端返回的数据不完整，请稍后重试。", {
+      status: 0,
+      code: "INVALID_RESPONSE"
+    });
+  }
+  return { id: payload.id, favorited: Boolean(payload.favorited) };
 }

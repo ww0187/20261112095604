@@ -6,7 +6,9 @@ import {
   deleteMessage,
   getProfile,
   listMessages,
-  saveNickname
+  saveNickname,
+  toggleFavorite as toggleFavoriteApi,
+  toggleLike as toggleLikeApi
 } from "../api/client.js";
 
 /* 常量继续从 store 转出，保持既有的 import 写法兼容 */
@@ -18,11 +20,21 @@ const FALLBACK = {
   add: "发布失败，请稍后重试。",
   remove: "删除失败，请稍后重试。",
   clear: "清空失败，请稍后重试。",
-  nickname: "昵称保存失败，请稍后重试。"
+  nickname: "昵称保存失败，请稍后重试。",
+  react: "操作失败，请稍后重试。"
 };
+
+/* 列表筛选：all 全部、favorites 只看收藏；不在这两个值里的一律回退 all */
+const FILTER_ALL = "all";
+const FILTER_FAVORITES = "favorites";
 
 function trimTo(value, max) {
   return String(value ?? "").trim().slice(0, max);
+}
+
+/* 只替换命中的那条消息，返回新数组：保持其余消息的引用与顺序不变 */
+function patchMessage(messages, id, patch) {
+  return messages.map((item) => (item.id === id ? { ...item, ...patch } : item));
 }
 
 export const useMessagesStore = defineStore("messages", {
@@ -31,12 +43,20 @@ export const useMessagesStore = defineStore("messages", {
     nickname: "",
     loading: false,
     hydrated: false,
-    error: ""
+    error: "",
+    filter: FILTER_ALL
   }),
 
   getters: {
     total: (state) => state.messages.length,
-    hasMessages: (state) => state.messages.length > 0
+    hasMessages: (state) => state.messages.length > 0,
+    /* 收藏筛选下只留 favorited 为真的消息，顺序沿用服务端返回的顺序 */
+    visibleMessages: (state) =>
+      state.filter === FILTER_FAVORITES
+        ? state.messages.filter((item) => Boolean(item.favorited))
+        : state.messages,
+    favoriteCount: (state) => state.messages.filter((item) => Boolean(item.favorited)).length,
+    likedCount: (state) => state.messages.filter((item) => Boolean(item.liked)).length
   },
 
   actions: {
@@ -138,6 +158,51 @@ export const useMessagesStore = defineStore("messages", {
       } finally {
         this.loading = false;
       }
+    },
+
+    /**
+     * 点赞 / 取消点赞：计数完全以服务端返回为准（本地不做 +1 / -1）。
+     * 失败只写 error 并返回 false，绝不抛异常；不动 loading，避免影响删除与清空按钮。
+     */
+    async toggleLike(id) {
+      this.error = "";
+
+      try {
+        const result = await toggleLikeApi(id);
+        this.messages = patchMessage(this.messages, id, {
+          likes: result.likes,
+          liked: result.liked
+        });
+        return true;
+      } catch (error) {
+        console.warn("点赞失败：", error);
+        this.error = FALLBACK.react;
+        return false;
+      }
+    },
+
+    /**
+     * 收藏 / 取消收藏：同样只认服务端返回的 favorited。
+     * 返回 true / false，调用方据此提示。
+     */
+    async toggleFavorite(id) {
+      this.error = "";
+
+      try {
+        const result = await toggleFavoriteApi(id);
+        this.messages = patchMessage(this.messages, id, { favorited: result.favorited });
+        return true;
+      } catch (error) {
+        console.warn("收藏失败：", error);
+        this.error = FALLBACK.react;
+        return false;
+      }
+    },
+
+    /* 切换列表筛选：只接受 all / favorites，其它值一律回退 all */
+    setFilter(next) {
+      this.filter = next === FILTER_FAVORITES ? FILTER_FAVORITES : FILTER_ALL;
+      return this.filter;
     },
 
     /**

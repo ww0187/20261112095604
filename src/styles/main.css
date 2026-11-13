@@ -462,6 +462,74 @@ body {
   list-style: none;
 }
 
+/* 筛选胶囊 + 清空按钮 */
+.feed__tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feed__filters {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 250, 238, 0.8);
+  box-shadow: inset 0 1px 2px rgba(104, 56, 30, 0.05);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.2s var(--ease), background-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.chip:hover {
+  color: var(--maple);
+  background: rgba(179, 55, 42, 0.08);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--maple);
+  outline-offset: 1px;
+}
+
+.chip.is-active {
+  color: #fffaf0;
+  background: linear-gradient(135deg, #cc4c30 0%, var(--maple) 58%, var(--maple-deep) 100%);
+  box-shadow: 0 10px 18px -14px rgba(143, 36, 24, 0.95), inset 0 1px 0 rgba(255, 235, 200, 0.3);
+}
+
+.chip__count {
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  color: var(--maple-deep);
+  border-radius: var(--radius-pill);
+  background: rgba(179, 55, 42, 0.12);
+}
+
+.chip.is-active .chip__count {
+  color: #fff3d8;
+  background: rgba(255, 246, 226, 0.24);
+}
+
 .feed__toast {
   margin: 14px 0 0;
   font-size: 12.5px;
@@ -558,6 +626,78 @@ body {
   color: var(--ink);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* 卡片底部操作条：点赞与收藏 */
+.post__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line-soft);
+}
+
+.post__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink-mute);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.2s var(--ease), background-color 0.2s var(--ease),
+    border-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.post__action svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  transition: transform 0.2s var(--ease);
+}
+
+.post__action--favorite {
+  padding: 3px 8px;
+}
+
+.post__action-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.post__action:hover {
+  color: var(--maple);
+  border-color: rgba(179, 55, 42, 0.28);
+  background: rgba(179, 55, 42, 0.07);
+}
+
+.post__action:hover svg {
+  transform: scale(1.08);
+}
+
+.post__action:active {
+  transform: translateY(1px);
+}
+
+.post__action:focus-visible {
+  outline: 2px solid var(--maple);
+  outline-offset: 1px;
+}
+
+.post__action.is-active {
+  color: var(--maple);
+  border-color: rgba(179, 55, 42, 0.3);
+  background: var(--maple-soft);
+}
+
+.post__action.is-active .post__action-count {
+  font-weight: 600;
 }
 
 .post__delete {
@@ -727,6 +867,26 @@ body {
     width: 37px;
     height: 37px;
     font-size: 15px;
+  }
+
+  .feed__head {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .feed__tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* 触屏没有 hover，操作条给足点击区域 */
+  .post__actions {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .post__action {
+    padding: 5px 12px 5px 10px;
   }
 
   /* 触屏无悬停，删除按钮常显 */
