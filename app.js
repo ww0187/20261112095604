@@ -1,6 +1,6 @@
 /* ============================================================
    茶话会 · 应用逻辑
-   结构：存储层 → 渲染层 → 事件层
+   结构：存储层 → 示例数据 → 渲染层 → 事件层
    数据只在本地 localStorage 中流转，无任何网络请求。
    ============================================================ */
 (function () {
@@ -22,6 +22,33 @@
     "linear-gradient(145deg, #a89579, #85705a)",
     "linear-gradient(145deg, #8f9c8a, #6b7a67)",
     "linear-gradient(145deg, #c08c78, #a06a55)"
+  ];
+
+  /* 示例数据：仅在本地没有茶话记录时注入一次，用于首次体验与项目展示 */
+  var SEED_COUNT = 10;
+  var SEED_NICKNAMES = [
+    "阿茶", "老周", "小满", "林间", "阿吉", "木鱼",
+    "云片糕", "陶陶", "白露", "阿禾", "拾光", "一勺"
+  ];
+  var SEED_CONTENTS = [
+    "今天泡了一壶陈年普洱，回甘很长，一整个下午都安静下来了。",
+    "隔壁工位换了个新同事，第一天就带了自家做的桂花糕来分。",
+    "下雨天最适合煮茶。窗外雨声，屋里水汽，什么都不想做。",
+    "求推荐一首适合读书时循环的歌，最近耳朵有点挑。",
+    "把阳台的旧木桌擦干净了，铺了块格子布，突然有了个喝茶的角落。\n下午三点阳光刚好。",
+    "藏了三年的白茶开罐了，枣香比想象中明显。",
+    "有人一起拼一壶白茶吗？下午三点，老地方见。",
+    "刚学会用盖碗，手忙脚乱地烫了两次，但茶是真的香。",
+    "读到一句很喜欢的话：慢慢来，比较快。",
+    "晚饭后散步四十分钟，路过一家开在巷子深处的小茶馆。",
+    "整理冰箱发现半年前买的桂花，居然还香。明天泡一杯。",
+    "今天的第一杯茶是冷的，因为泡完忘了喝。有点可惜。",
+    "茶凉了可以续，话说一半就太可惜了。\n所以，继续聊。",
+    "想给书桌换个位置，靠窗但会晒。纠结了一个小时还没动。",
+    "老周带来的茶点太甜，配苦一点的茶刚好平衡。",
+    "第一次认真洗了一把紫砂壶，水都染成淡茶色了。",
+    "周末打算去山上走走，顺便看看有没有早春的芽。",
+    "深夜煮了壶熟普，屋子里像点了暖灯。"
   ];
 
   /* ---------------- 元素引用 ---------------- */
@@ -101,6 +128,61 @@
       showToast("本地存储写入失败，可能是浏览器隐私模式或空间已满。");
       return false;
     }
+  }
+
+  /* ---------------- 示例数据 ---------------- */
+  function shuffle(list) {
+    var arr = list.slice();
+    for (var i = arr.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  /* 只判断键是否存在：清空全部会写入 "[]"，因此不会再次注入 */
+  function hasStoredMessages() {
+    try {
+      return window.localStorage.getItem(STORAGE_KEYS.messages) !== null;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /* 随机抽取 10 条示例，时间从“刚刚”铺开到 6 天前，且严格递减 */
+  function createSeedMessages() {
+    var nicknames = shuffle(SEED_NICKNAMES);
+    var contents = shuffle(SEED_CONTENTS);
+    var now = Date.now();
+    /* 每条相对上一条再往前推的秒数：覆盖 刚刚 / 分钟 / 小时 / 天 */
+    var gaps = [30, 6 * 60, 45 * 60, 3 * 3600, 6 * 3600, 18 * 3600, 22 * 3600, 26 * 3600, 30 * 3600, 36 * 3600];
+    var offset = 0;
+    var messages = [];
+
+    for (var i = 0; i < SEED_COUNT; i += 1) {
+      offset += (gaps[i % gaps.length] + Math.floor(Math.random() * 60)) * 1000;
+      messages.push({
+        id: "seed-" + i + "-" + genId(),
+        nickname: nicknames[i % nicknames.length],
+        content: contents[i % contents.length],
+        createdAt: now - offset
+      });
+    }
+
+    return messages;
+  }
+
+  function ensureMessages() {
+    if (hasStoredMessages()) return loadMessages();
+
+    state.messages = createSeedMessages();
+    if (!saveMessages()) {
+      state.messages = [];
+      return [];
+    }
+    return state.messages;
   }
 
   function loadNickname() {
@@ -335,7 +417,7 @@
 
   /* ---------------- 初始化 ---------------- */
   function init() {
-    state.messages = loadMessages();
+    state.messages = ensureMessages();
     el.nickname.value = loadNickname();
     bindEvents();
     updateCounter();

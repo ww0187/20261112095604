@@ -2,6 +2,16 @@
 
 一个极简的本地微博。纯 HTML + CSS + JavaScript 实现，无需安装、无需构建、无网络依赖，数据全部保存在浏览器的 Local Storage 中。
 
+## 界面预览
+
+<p align="center">
+  <img src="docs/preview-desktop.png" alt="茶话会桌面端界面" width="720" />
+</p>
+
+<p align="center">
+  <img src="docs/preview-mobile.png" alt="茶话会移动端界面（390px）" width="300" />
+</p>
+
 ## 功能
 
 - 发布茶话：正文最多 200 字，可填昵称（最多 20 字，不填则显示“茶友”）
@@ -10,6 +20,17 @@
 - 字数计数、内容为空时禁止发布、`Ctrl / ⌘ + Enter` 快捷发布
 - 单条删除（二次确认）、一键清空全部
 - 昵称自动记忆、头像按昵称生成配色、移动端响应式布局
+- 首次打开自动载入 10 条示例茶话，开箱即有内容
+
+## 示例数据
+
+首次打开时，若本地还没有任何茶话记录（`chahua_messages` 不存在），应用会从内置昵称池（12 个）与文案池（18 条）中随机抽取 10 条示例茶话写入本地存储。昵称与文案在同一批内互不重复，时间从「刚刚」一直铺到 5～6 天前，用于演示与截图。
+
+- 注入只发生一次：刷新页面不会重复生成，也不会覆盖已有内容
+- 示例茶话与真实内容同等对待，可正常删除
+- 点击「清空全部」后写入空数组，刷新仍为空，不会再次回填
+- 想重新生成一组示例：在 Console 执行 `localStorage.removeItem('chahua_messages')` 后刷新
+- 彻底重置：执行 `localStorage.clear()` 后刷新
 
 ## 运行
 
@@ -40,7 +61,10 @@ npx serve .
 .
 ├── index.html   # 页面结构：品牌栏、发布卡片、消息流、空状态
 ├── style.css    # 暖茶主题样式、动效与响应式布局
-├── app.js       # 存储层、渲染层、事件层
+├── app.js       # 存储层、示例数据、渲染层、事件层
+├── docs/        # README 使用的界面截图
+│   ├── preview-desktop.png
+│   └── preview-mobile.png
 └── README.md
 ```
 
