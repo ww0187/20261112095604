@@ -85,6 +85,75 @@ describe("App 集成", () => {
     expect(wrapper.find(".footer").text()).toContain("数据保存在服务端内存中");
   });
 
+  it("默认停在全部筛选，收藏数量为 0", async () => {
+    const wrapper = await mountApp();
+
+    expect(wrapper.find('[data-test="filter-all"]').attributes("aria-pressed")).toBe("true");
+    expect(wrapper.find('[data-test="filter-favorites"]').attributes("aria-pressed")).toBe("false");
+    expect(wrapper.find('[data-test="favorite-count"]').text()).toBe("0");
+  });
+
+  it("收藏筛选没有结果时展示书签空态，切回全部恢复列表", async () => {
+    const wrapper = await mountApp();
+
+    await wrapper.find('[data-test="filter-favorites"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-test="post"]')).toHaveLength(0);
+    expect(wrapper.find('[data-test="empty"]').text()).toContain("书签里还空着");
+    expect(wrapper.find('[data-test="empty"]').text()).not.toContain("茶桌还空着");
+
+    await wrapper.find('[data-test="filter-all"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-test="post"]')).toHaveLength(10);
+  });
+
+  it("点赞后计数 +1 且按钮进入激活态", async () => {
+    const wrapper = await mountApp();
+
+    expect(wrapper.findAll('[data-test="like-count"]')[0].text()).toBe("0");
+
+    await wrapper.findAll('[data-test="like"]')[0].trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-test="like-count"]')[0].text()).toBe("1");
+    expect(wrapper.findAll('[data-test="like"]')[0].attributes("aria-pressed")).toBe("true");
+  });
+
+  it("收藏后收藏数量 +1，切到收藏筛选只剩这一条", async () => {
+    const wrapper = await mountApp();
+
+    await wrapper.findAll('[data-test="favorite"]')[0].trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="favorite-count"]').text()).toBe("1");
+    expect(wrapper.find(".feed__toast").text()).toContain("已收进茶桌抽屉");
+
+    await wrapper.find('[data-test="filter-favorites"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-test="post"]')).toHaveLength(1);
+  });
+
+  it("在收藏筛选里取消收藏后回到书签空态", async () => {
+    const wrapper = await mountApp();
+
+    await wrapper.findAll('[data-test="favorite"]')[0].trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-test="filter-favorites"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-test="post"]')).toHaveLength(1);
+
+    await wrapper.findAll('[data-test="favorite"]')[0].trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-test="post"]')).toHaveLength(0);
+    expect(wrapper.find('[data-test="empty"]').text()).toContain("书签里还空着");
+    expect(wrapper.find(".feed__toast").text()).toContain("已从抽屉取出");
+  });
+
   it("后端不可用时首屏降级为空状态并给出提示", async () => {
     const original = globalThis.fetch;
     globalThis.fetch = () => Promise.reject(new TypeError("Failed to fetch"));

@@ -6,7 +6,9 @@ import {
   deleteMessage,
   getProfile,
   listMessages,
-  saveNickname
+  saveNickname,
+  toggleFavorite,
+  toggleLike
 } from "./client";
 import { API_BASE } from "../shared/constants.js";
 
@@ -121,6 +123,124 @@ describe("api/client", () => {
       expect(error.status).toBe(500);
       expect(error.code).toBe("INTERNAL_ERROR");
       expect(error.message).toBe("服务内部错误，请稍后重试。");
+    });
+  });
+
+  /* 只伪造响应，不关心真实路由：用于校验归一逻辑与异常分支 */
+  function fakeResponse(body, { status = 200 } = {}) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => (typeof body === "string" ? body : JSON.stringify(body))
+    };
+  }
+
+  describe("toggleLike", () => {
+    it("以 POST 打到 /messages/:id/like，并原样返回服务端计数", async () => {
+      const calls = [];
+      const result = await withFetch(
+        (input, init) => {
+          calls.push({ input, init });
+          return Promise.resolve(fakeResponse({ id: "m-1", likes: 7, liked: true }));
+        },
+        () => toggleLike("m-1")
+      );
+
+      expect(calls[0].input).toBe(`${API_BASE}/messages/m-1/like`);
+      expect(calls[0].init.method).toBe("POST");
+      expect(calls[0].init.body).toBeUndefined();
+      expect(result).toEqual({ id: "m-1", likes: 7, liked: true });
+    });
+
+    it("likes 缺失或非法时归零，liked 缺失时视为未点赞", async () => {
+      const missing = await withFetch(
+        () => Promise.resolve(fakeResponse({ id: "m-1" })),
+        () => toggleLike("m-1")
+      );
+      expect(missing).toEqual({ id: "m-1", likes: 0, liked: false });
+
+      const negative = await withFetch(
+        () => Promise.resolve(fakeResponse({ id: "m-1", likes: -3, liked: 0 })),
+        () => toggleLike("m-1")
+      );
+      expect(negative).toEqual({ id: "m-1", likes: 0, liked: false });
+
+      const weird = await withFetch(
+        () => Promise.resolve(fakeResponse({ id: "m-1", likes: "两杯" })),
+        () => toggleLike("m-1")
+      );
+      expect(weird.likes).toBe(0);
+    });
+
+    it("响应体缺少 id 时抛 INVALID_RESPONSE", async () => {
+      const error = await withFetch(
+        () => Promise.resolve(fakeResponse({ likes: 1 })),
+        () => capture(toggleLike("m-1"))
+      );
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.code).toBe("INVALID_RESPONSE");
+      expect(error.message).toBe("服务端返回的数据不完整，请稍后重试。");
+    });
+
+    it("消息不存在时抛 404 NOT_FOUND", async () => {
+      const error = await capture(toggleLike("not-exist"));
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.status).toBe(404);
+      expect(error.code).toBe("NOT_FOUND");
+      expect(error.message).toBe("请求的资源不存在");
+    });
+
+    it("网络异常归一为 ApiError（status 0 / NETWORK_ERROR）", async () => {
+      const error = await withFetch(
+        () => Promise.reject(new TypeError("Failed to fetch")),
+        () => capture(toggleLike("m-1"))
+      );
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.status).toBe(0);
+      expect(error.code).toBe("NETWORK_ERROR");
+    });
+  });
+
+  describe("toggleFavorite", () => {
+    it("以 POST 打到 /messages/:id/favorite，返回收藏状态", async () => {
+      const calls = [];
+      const result = await withFetch(
+        (input, init) => {
+          calls.push({ input, init });
+          return Promise.resolve(fakeResponse({ id: "m-2", favorited: true }));
+        },
+        () => toggleFavorite("m-2")
+      );
+
+      expect(calls[0].input).toBe(`${API_BASE}/messages/m-2/favorite`);
+      expect(calls[0].init.method).toBe("POST");
+      expect(result).toEqual({ id: "m-2", favorited: true });
+    });
+
+    it("favorited 缺失时兜底为 false，响应缺少 id 时抛 INVALID_RESPONSE", async () => {
+      const loose = await withFetch(
+        () => Promise.resolve(fakeResponse({ id: "m-2" })),
+        () => toggleFavorite("m-2")
+      );
+      expect(loose).toEqual({ id: "m-2", favorited: false });
+
+      const error = await withFetch(
+        () => Promise.resolve(fakeResponse("null")),
+        () => capture(toggleFavorite("m-2"))
+      );
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.code).toBe("INVALID_RESPONSE");
+    });
+
+    it("消息不存在时抛 404 NOT_FOUND", async () => {
+      const error = await capture(toggleFavorite("not-exist"));
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.status).toBe(404);
+      expect(error.code).toBe("NOT_FOUND");
     });
   });
 
