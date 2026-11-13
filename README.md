@@ -22,6 +22,8 @@
 - 查看茶话：按时间倒序展示，相对时间（刚刚 / x 分钟前 / x 小时前 / x 天前 / 日期）
 - 服务端持久：数据保存在 Node 进程内存中，刷新、重开浏览器后依然存在；重启服务则重置
 - 字数计数、内容为空时禁止发布、`Ctrl / ⌘ + Enter` 快捷发布
+- 点赞与收藏：每张卡片底部一条操作栏，点赞带计数，收藏是书签开关；状态存在服务端，刷新后仍在
+- 收藏筛选：顶部「全部 / 书签」胶囊切换，书签视图只留收藏过的茶话，角标显示收藏数
 - 单条删除（二次确认）、一键清空全部
 - 昵称自动记忆（存服务端 profile）、头像按昵称生成暖秋配色、移动端响应式布局
 - 服务启动时自动注入 10 条示例茶话，开箱即有内容；清空后不会回填
@@ -58,12 +60,16 @@ npm start        # 仅启动 API 服务
 | GET | `/api/health` | 健康检查 | `200 { "status": "ok" }` |
 | GET | `/api/messages` | 全部茶话，按 `createdAt` 倒序 | `200 { "messages": Message[] }` |
 | POST | `/api/messages` | 发布，body `{ content, nickname }` | `201 { "message": Message }` |
+| POST | `/api/messages/:id/like` | 点赞 / 取消点赞（切换） | `200 { "id": "...", "likes": 13, "liked": true }` |
+| POST | `/api/messages/:id/favorite` | 收藏 / 取消收藏（切换） | `200 { "id": "...", "favorited": true }` |
 | DELETE | `/api/messages/:id` | 删除单条 | `200 { "deleted": true, "id": "..." }` |
 | DELETE | `/api/messages` | 清空全部 | `200 { "deleted": 10 }` |
 | GET | `/api/profile` | 读取上次使用的昵称 | `200 { "nickname": "阿茶" }` |
 | PUT | `/api/profile` | 保存昵称，body `{ nickname }` | `200 { "nickname": "阿茶" }` |
 
-`Message` 字段：`id`、`nickname`、`content`、`createdAt`（毫秒时间戳）。
+`Message` 字段：`id`、`nickname`、`content`、`createdAt`（毫秒时间戳）、`likes`（点赞总数）、`liked`（当前用户是否已点赞）、`favorited`（当前用户是否已收藏）。
+
+点赞与收藏没有用户体系，按单一用户处理：状态直接挂在消息上，切换接口返回切换后的全量计数值，前端不做本地加减。
 
 错误统一为 `{ "error": { "code": "...", "message": "中文提示" } }`：
 
@@ -82,20 +88,20 @@ npm start        # 仅启动 API 服务
 2. **绿**：再实现 `server/*`、`src/api/client.js`、`src/stores/messages.js` 与组件，直到全部测试通过。
 3. **重构**：在测试保护下拆分模块，保持行为不变。
 
-当前覆盖 10 个测试文件、95 个用例：
+当前覆盖 10 个测试文件、149 个用例：
 
-| 测试文件 | 关注点 |
-| --- | --- |
-| `server/store.spec.js` | 内存存储：示例注入、排序、增删清空、昵称、边界截断、副本隔离 |
-| `server/app.spec.js` | REST 契约：状态码、响应体、错误码、profile 同步、未匹配路由 |
-| `src/api/client.spec.js` | 请求前缀/方法/请求体、JSON 解析、400/404 归一、网络异常兜底 |
-| `src/stores/messages.spec.js` | hydrate 载入、发布/删除/清空的服务端同步、失败降级、昵称记忆 |
-| `src/components/MessageComposer.spec.js` | 计数、按钮禁用、trim 提交、空内容拦截、Ctrl+Enter、输入上限 |
-| `src/components/MessageItem.spec.js` | 渲染、头像、HTML 转义、换行保留、删除事件 |
-| `src/components/MessageList.spec.js` | 列表渲染、空状态、事件透传 |
-| `src/utils/time.spec.js` | 相对时间边界（刚刚 / 分钟 / 小时 / 天 / 日期 / 跨年 / 非法值） |
-| `src/utils/avatar.spec.js` | 头像渐变确定性、首字兜底 |
-| `src/App.spec.js` | 集成：首屏载入、发布、删除、清空、刷新后从服务端读回、后端不可用降级 |
+| 测试文件 | 用例 | 关注点 |
+| --- | --- | --- |
+| `server/store.spec.js` | 29 | 内存存储：示例注入、排序、增删清空、昵称、点赞/收藏切换与副本隔离 |
+| `server/app.spec.js` | 28 | REST 契约：状态码、响应体、错误码、点赞/收藏接口、profile 同步、未匹配路由 |
+| `src/api/client.spec.js` | 18 | 请求前缀/方法/请求体、JSON 解析、400/404 归一、点赞收藏响应归一、网络异常兜底 |
+| `src/stores/messages.spec.js` | 25 | hydrate 载入、发布/删除/清空的服务端同步、点赞/收藏与筛选、失败降级、昵称记忆 |
+| `src/components/MessageComposer.spec.js` | 7 | 计数、按钮禁用、trim 提交、空内容拦截、Ctrl+Enter、输入上限 |
+| `src/components/MessageItem.spec.js` | 13 | 渲染、头像、HTML 转义、换行保留、删除/点赞/收藏事件、切换态 |
+| `src/components/MessageList.spec.js` | 6 | 列表渲染、空状态、事件透传 |
+| `src/utils/time.spec.js` | 7 | 相对时间边界（刚刚 / 分钟 / 小时 / 天 / 日期 / 跨年 / 非法值） |
+| `src/utils/avatar.spec.js` | 4 | 头像渐变确定性、首字兜底 |
+| `src/App.spec.js` | 12 | 集成：首屏载入、发布、删除、清空、点赞计数、收藏筛选、刷新后读回、后端不可用降级 |
 
 测试中不监听端口：`tests/setup.js` 为每个用例创建独立的内存 store 与 Hono 实例，并把 `globalThis.fetch` 指向 `app.request`，前端代码因此跑的是真实路由与序列化。
 
