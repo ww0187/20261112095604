@@ -87,11 +87,6 @@ body {
   flex-direction: column;
 }
 
-/* hidden 属性优先级需高于组件 display 定义 */
-[hidden] {
-  display: none !important;
-}
-
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -340,20 +335,18 @@ body {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   letter-spacing: 0.02em;
-  transition: color 0.2s var(--ease);
-}
-
-.composer__counter.is-warning {
-  color: var(--clay);
-}
-
-.composer__counter.is-over {
-  color: var(--danger);
 }
 
 .composer__hint {
   padding-left: 12px;
   border-left: 1px solid #ecd7b6;
+}
+
+.composer__error {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--danger);
 }
 
 /* ---------------- 按钮 ---------------- */
@@ -425,24 +418,6 @@ body {
   background: rgba(179, 55, 42, 0.07);
 }
 
-/* ---------------- 提示浮层 ---------------- */
-.composer__toast {
-  margin: 0;
-  height: 0;
-  overflow: hidden;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--danger);
-  opacity: 0;
-  transition: opacity 0.2s var(--ease), height 0.2s var(--ease);
-}
-
-.composer__toast.is-visible {
-  height: 20px;
-  margin-top: 10px;
-  opacity: 1;
-}
-
 /* ---------------- 消息流 ---------------- */
 .feed {
   margin-top: 32px;
@@ -487,6 +462,13 @@ body {
   list-style: none;
 }
 
+.feed__toast {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--ink-mute);
+}
+
 /* 消息卡片 */
 .post {
   position: relative;
@@ -512,10 +494,6 @@ body {
   background: linear-gradient(180deg, var(--maple), var(--osmanthus));
   opacity: 0;
   transition: opacity 0.2s var(--ease);
-}
-
-.post--animate {
-  animation: rise 0.35s var(--ease) both;
 }
 
 .post:hover {
@@ -624,7 +602,7 @@ body {
 
 /* ---------------- 空状态 ---------------- */
 .empty {
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
   padding: 44px 20px 50px;
@@ -632,10 +610,6 @@ body {
   border: 1.5px dashed #e7c79a;
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, #fffdf6 0%, #fdf1d9 100%);
-}
-
-.empty.is-visible {
-  display: flex;
 }
 
 .empty__art {
@@ -685,18 +659,6 @@ body {
 
 .footer p::after {
   background: linear-gradient(90deg, #dcbb90, transparent);
-}
-
-/* ---------------- 动效 ---------------- */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* ---------------- 响应式 ---------------- */

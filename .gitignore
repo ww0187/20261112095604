@@ -1,7 +1,9 @@
-# 编辑器 / IDE
+# 编辑器 / IDE / 工具
 .vscode/
 .idea/
 .codebuddy/
+.agents/
+skills-lock.json
 *.iml
 *.swp
 
@@ -10,7 +12,9 @@
 Thumbs.db
 desktop.ini
 
-# 依赖与构建产物（本项目无需构建，仅作兜底）
+# 依赖与构建产物
 node_modules/
 dist/
+coverage/
+.vite/
 *.log

@@ -3,122 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="茶话会 —— 一个数据只保存在本机的极简微博。" />
+  <meta name="description" content="茶话会 —— 一个数据只保存在本机的极简微博，基于 Vue 3 + Pinia 实现。" />
   <meta name="theme-color" content="#B3372A" />
   <title>茶话会 · 秋意正浓，泡壶茶聊聊</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8D%B5%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="page">
-    <!-- 顶部品牌栏 -->
-    <header class="brand">
-      <div class="brand__glow" aria-hidden="true"></div>
-      <div class="brand__inner">
-        <div class="brand__identity">
-          <span class="brand__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 12h12v3.4A5.6 5.6 0 0 1 10.4 21h-.8A5.6 5.6 0 0 1 4 15.4V12Z" />
-              <path d="M16 13h1.6a2.1 2.1 0 0 1 0 4.2H16" />
-              <path d="M4.5 22h11" />
-              <path d="M11.8 2.2l.9 1.9 2-.4-.8 1.7 1.8 1-1.8.7.3 1.9-1.6-1.2-1.6 1.2.3-1.9-1.8-.7 1.8-1-.8-1.7 2 .4z" fill="currentColor" stroke="none" />
-            </svg>
-          </span>
-          <div>
-            <h1 class="brand__title">茶话会</h1>
-            <p class="brand__subtitle">秋意正浓，泡壶茶慢慢聊</p>
-          </div>
-        </div>
-
-        <div class="brand__stats" title="本机已保存的茶话数量">
-          <span class="brand__stats-num" id="stat-count">0</span>
-          <span class="brand__stats-label">杯茶话</span>
-        </div>
-      </div>
-    </header>
-
-    <main class="shell">
-      <!-- 发布卡片 -->
-      <section class="composer card" aria-labelledby="composer-heading">
-        <h2 class="visually-hidden" id="composer-heading">发布一条茶话</h2>
-
-        <form id="composer-form" class="composer__form" novalidate>
-          <div class="composer__field">
-            <label class="composer__label" for="nickname">昵称</label>
-            <input
-              class="composer__nickname"
-              id="nickname"
-              name="nickname"
-              type="text"
-              maxlength="20"
-              autocomplete="nickname"
-              placeholder="你的昵称，可不填"
-            />
-          </div>
-
-          <div class="composer__field composer__field--grow">
-            <label class="visually-hidden" for="content">茶话内容</label>
-            <textarea
-              class="composer__textarea"
-              id="content"
-              name="content"
-              rows="4"
-              maxlength="200"
-              placeholder="今天想聊点什么茶话？"
-              aria-describedby="composer-hint"
-            ></textarea>
-          </div>
-
-          <div class="composer__footer">
-            <div class="composer__meta">
-              <span class="composer__counter" id="counter" aria-live="polite">0 / 200</span>
-              <span class="composer__hint" id="composer-hint">Ctrl / ⌘ + Enter 快速发布</span>
-            </div>
-            <button class="btn btn--primary" type="submit" id="submit-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4.5 12 20 4.5 15.5 20 12 13.5 4.5 12Z" />
-              </svg>
-              发布茶话
-            </button>
-          </div>
-        </form>
-
-        <p class="composer__toast" id="toast" role="status" aria-live="polite"></p>
-      </section>
-
-      <!-- 消息流 -->
-      <section class="feed" aria-labelledby="feed-heading">
-        <div class="feed__head">
-          <h2 class="feed__title" id="feed-heading">茶话记录</h2>
-          <button class="btn btn--ghost" type="button" id="clear-btn" hidden>清空全部</button>
-        </div>
-
-        <ul class="feed__list" id="feed-list" aria-live="polite"></ul>
-
-        <!-- 空状态 -->
-        <div class="empty" id="empty-state">
-          <svg class="empty__art" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M28 48h50v17a25 25 0 0 1-25 25h0a25 25 0 0 1-25-25V48Z" />
-            <path d="M78 52h6a10 10 0 0 1 0 20h-6" />
-            <path d="M40 30c2.5 3 2.5 5.5 0 8.5M54 26c2.5 3 2.5 5.5 0 8.5" />
-            <path d="M24 102h58" />
-            <g fill="currentColor" stroke="none" opacity=".65">
-              <circle cx="96" cy="32" r="3.4" />
-              <circle cx="103" cy="39" r="3.4" />
-              <circle cx="89" cy="39" r="3.4" />
-            </g>
-          </svg>
-          <p class="empty__title">茶桌还空着</p>
-          <p class="empty__text">泡一壶热茶，说说今天的秋意。</p>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <p>数据仅保存在本机浏览器 · 茶话会</p>
-    </footer>
-  </div>
-
-  <script src="app.js" defer></script>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
