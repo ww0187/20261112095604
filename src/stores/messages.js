@@ -1,77 +1,37 @@
 import { defineStore } from "pinia";
-import { createSeedMessages } from "../data/seed";
+import { DEFAULT_NICKNAME, MAX_LENGTH, MAX_NICKNAME, SEED_COUNT } from "../shared/constants.js";
+import {
+  clearMessages,
+  createMessage,
+  deleteMessage,
+  getProfile,
+  listMessages,
+  saveNickname
+} from "../api/client.js";
 
-export const STORAGE_KEYS = {
-  messages: "chahua_messages",
-  nickname: "chahua_nickname"
+/* 常量继续从 store 转出，保持既有的 import 写法兼容 */
+export { DEFAULT_NICKNAME, MAX_LENGTH, MAX_NICKNAME, SEED_COUNT };
+
+/* 失败时的中文兜底文案，避免把英文异常或 HTTP 细节暴露给用户 */
+const FALLBACK = {
+  hydrate: "茶话加载失败，请稍后重试。",
+  add: "发布失败，请稍后重试。",
+  remove: "删除失败，请稍后重试。",
+  clear: "清空失败，请稍后重试。",
+  nickname: "昵称保存失败，请稍后重试。"
 };
 
-export const MAX_LENGTH = 200;
-export const MAX_NICKNAME = 20;
-export const DEFAULT_NICKNAME = "茶友";
-export const SEED_COUNT = 10;
-
-function safeGet(key) {
-  try {
-    return window.localStorage.getItem(key);
-  } catch (error) {
-    console.warn("读取本地数据失败：", error);
-    return null;
-  }
-}
-
-function safeSet(key, value) {
-  try {
-    window.localStorage.setItem(key, value);
-    return true;
-  } catch (error) {
-    console.warn("保存本地数据失败：", error);
-    return false;
-  }
-}
-
-function createId() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function normalizeMessage(raw) {
-  if (!raw || typeof raw !== "object") return null;
-
-  const content = typeof raw.content === "string" ? raw.content.trim() : "";
-  if (!content) return null;
-
-  const nickname = typeof raw.nickname === "string" ? raw.nickname.trim() : "";
-  const createdAt = Number(raw.createdAt);
-
-  return {
-    id: typeof raw.id === "string" && raw.id ? raw.id : createId(),
-    nickname: nickname.slice(0, MAX_NICKNAME) || DEFAULT_NICKNAME,
-    content: content.slice(0, MAX_LENGTH),
-    createdAt: Number.isFinite(createdAt) && createdAt > 0 ? createdAt : Date.now()
-  };
-}
-
-function parseMessages(raw) {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map(normalizeMessage)
-      .filter(Boolean)
-      .sort((a, b) => b.createdAt - a.createdAt);
-  } catch (error) {
-    console.warn("本地数据格式异常，已忽略：", error);
-    return [];
-  }
+function trimTo(value, max) {
+  return String(value ?? "").trim().slice(0, max);
 }
 
 export const useMessagesStore = defineStore("messages", {
   state: () => ({
     messages: [],
     nickname: "",
-    storageError: false,
-    hydrated: false
+    loading: false,
+    hydrated: false,
+    error: ""
   }),
 
   getters: {
@@ -80,65 +40,124 @@ export const useMessagesStore = defineStore("messages", {
   },
 
   actions: {
-    hydrate() {
-      this.nickname = safeGet(STORAGE_KEYS.nickname) || "";
+    /**
+     * 首屏载入：并行拉取消息列表与昵称。
+     * 任何失败都降级为空列表，只把中文提示写进 error，绝不向组件抛异常。
+     */
+    async hydrate() {
+      this.loading = true;
+      this.error = "";
 
-      const raw = safeGet(STORAGE_KEYS.messages);
-      if (raw === null) {
-        /* 首次访问：注入示例茶话，仅写入一次 */
-        this.messages = createSeedMessages().sort((a, b) => b.createdAt - a.createdAt);
-        this.persist();
-      } else {
-        this.messages = parseMessages(raw);
+      try {
+        const [messages, nickname] = await Promise.all([listMessages(), getProfile()]);
+        this.messages = Array.isArray(messages) ? messages : [];
+        this.nickname = trimTo(nickname, MAX_NICKNAME);
+      } catch (error) {
+        console.warn("加载茶话失败：", error);
+        this.error = FALLBACK.hydrate;
+        this.messages = [];
+      } finally {
+        this.loading = false;
+        /* 失败也算“已尝试过”，避免界面一直停在加载态 */
+        this.hydrated = true;
       }
 
-      this.hydrated = true;
       return this.messages;
     },
 
-    persist() {
-      const ok = safeSet(STORAGE_KEYS.messages, JSON.stringify(this.messages));
-      this.storageError = !ok;
-      return ok;
-    },
-
-    addMessage({ content, nickname } = {}) {
-      const text = String(content ?? "").trim().slice(0, MAX_LENGTH);
+    /**
+     * 发布一条茶话：本地先 trim + 截断，空白内容直接返回 null（不发请求）。
+     * 成功后用服务端返回的消息置顶，并同步服务端已记住的昵称。
+     */
+    async addMessage({ content, nickname } = {}) {
+      const text = trimTo(content, MAX_LENGTH);
       if (!text) return null;
 
-      const name = String(nickname ?? "").trim().slice(0, MAX_NICKNAME) || DEFAULT_NICKNAME;
-      const message = {
-        id: createId(),
-        nickname: name,
-        content: text,
-        createdAt: Date.now()
-      };
+      const name = trimTo(nickname, MAX_NICKNAME) || DEFAULT_NICKNAME;
 
-      this.messages.unshift(message);
-      this.nickname = name;
-      this.persist();
-      this.setNickname(name);
-      return message;
+      this.loading = true;
+      this.error = "";
+
+      try {
+        const message = await createMessage({ content: text, nickname: name });
+        if (!message) {
+          this.error = FALLBACK.add;
+          return null;
+        }
+
+        /* 服务端写入时会同时更新 profile，这里不需要再发一次 PUT */
+        this.messages = [message, ...this.messages];
+        this.nickname = message.nickname || name;
+        return message;
+      } catch (error) {
+        console.warn("发布茶话失败：", error);
+        this.error = FALLBACK.add;
+        return null;
+      } finally {
+        this.loading = false;
+      }
     },
 
-    removeMessage(id) {
-      const next = this.messages.filter((item) => item.id !== id);
-      if (next.length === this.messages.length) return false;
-      this.messages = next;
-      this.persist();
-      return true;
+    /**
+     * 删除一条：先请求服务端，成功后再改本地列表。
+     * 返回 true / false，调用方据此决定是否提示。
+     */
+    async removeMessage(id) {
+      this.loading = true;
+      this.error = "";
+
+      try {
+        await deleteMessage(id);
+        this.messages = this.messages.filter((item) => item.id !== id);
+        return true;
+      } catch (error) {
+        console.warn("删除茶话失败：", error);
+        this.error = FALLBACK.remove;
+        return false;
+      } finally {
+        this.loading = false;
+      }
     },
 
-    clearAll() {
-      this.messages = [];
-      this.persist();
+    /**
+     * 清空全部：返回被删除的条数（失败返回 0）。
+     * 服务端清空后不会再灌示例数据，刷新依旧是空桌。
+     */
+    async clearAll() {
+      this.loading = true;
+      this.error = "";
+
+      try {
+        const removed = await clearMessages();
+        this.messages = [];
+        return removed;
+      } catch (error) {
+        console.warn("清空茶话失败：", error);
+        this.error = FALLBACK.clear;
+        return 0;
+      } finally {
+        this.loading = false;
+      }
     },
 
-    setNickname(name) {
-      const value = String(name ?? "").trim().slice(0, MAX_NICKNAME);
+    /**
+     * 记住昵称：本地立即规范化（trim + 20 字）并写回 state，
+     * 同时立刻 PUT 到服务端；失败只置 error，不打断输入。
+     */
+    async setNickname(name) {
+      const value = trimTo(name, MAX_NICKNAME);
       this.nickname = value;
-      if (value) safeSet(STORAGE_KEYS.nickname, value);
-      else safeGet(STORAGE_KEYS.nickname) !== null && safeSet(STORAGE_KEYS.nickname, "");
+
+      try {
+        const saved = await saveNickname(value);
+        /* 逐字符输入会产生多次 PUT，只认最后一次输入对应的响应，避免乱序覆盖 */
+        if (this.nickname === value) this.nickname = trimTo(saved, MAX_NICKNAME);
+      } catch (error) {
+        console.warn("保存昵称失败：", error);
+        this.error = FALLBACK.nickname;
+      }
+
+      return this.nickname;
     }
   }
 });

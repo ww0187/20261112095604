@@ -24,7 +24,7 @@ defineProps({
         </div>
       </div>
 
-      <div class="brand__stats" title="本机已保存的茶话数量">
+      <div class="brand__stats" title="服务端已保存的茶话数量">
         <span class="brand__stats-num" data-test="stat-count">{{ total }}</span>
         <span class="brand__stats-label">杯茶话</span>
       </div>
