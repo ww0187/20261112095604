@@ -15,13 +15,13 @@
   var MAX_NICKNAME = 20;
   var DEFAULT_NICKNAME = "茶友";
 
-  /* 头像配色：五组柔和茶色渐变 */
+  /* 头像配色：五组暖秋渐变（枫红 / 金桂 / 栗子 / 焦糖 / 木色） */
   var AVATAR_COLORS = [
-    "linear-gradient(145deg, #93a06f, #6f8151)",
-    "linear-gradient(145deg, #b08a67, #8c6a4a)",
-    "linear-gradient(145deg, #a89579, #85705a)",
-    "linear-gradient(145deg, #8f9c8a, #6b7a67)",
-    "linear-gradient(145deg, #c08c78, #a06a55)"
+    "linear-gradient(145deg, #d4613c, #a8341f)",
+    "linear-gradient(145deg, #dfa23c, #b0761f)",
+    "linear-gradient(145deg, #b4563f, #7d3325)",
+    "linear-gradient(145deg, #c98a4b, #94622f)",
+    "linear-gradient(145deg, #9d6b4a, #6f4530)"
   ];
 
   /* 示例数据：仅在本地没有茶话记录时注入一次，用于首次体验与项目展示 */
